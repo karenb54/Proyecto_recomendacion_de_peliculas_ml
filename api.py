@@ -211,15 +211,10 @@ def obtener_exito_actor(nombre_actor: str):
 
     # Verificar si se encontraron peliculas
     if not peliculas_por_actor.empty:
-        # Convertir la columna 'id_credits' a tipo int para asegurar la coincidencia de tipo de datos
-        peliculas_por_actor['id_credits'] = pd.to_numeric(peliculas_por_actor['id_credits'], errors='coerce', downcast='integer')
         
         # Obtener los IDs de las peliculas en las que el actor ha participado
         peliculas_ids_columna = 'id_credits'  # Nombre de la columna en credits_df_parquet
         peliculas_ids = peliculas_por_actor[[peliculas_ids_columna]].drop_duplicates()
-
-        # Convertir la columna 'id_movies' a tipo int para asegurar la coincidencia de tipo de datos
-        movies_df_parquet['id_movies'] = pd.to_numeric(movies_df_parquet['id_movies'], errors='coerce', downcast='integer')
 
         # Unir los DataFrames de peliculas y creditos usando la columna 'id_movies' para el DataFrame de peliculas
         peliculas_actor_df = pd.merge(peliculas_ids, movies_df_parquet, left_on=peliculas_ids_columna, right_on='id_movies', how='inner')
@@ -290,15 +285,10 @@ def obtener_exito_director(nombre_director: str):
         
         # Verificar si se encontraron créditos con el rol de director
         if not peliculas_director.empty:
-            # Convertir la columna 'id_credits' a tipo int para asegurar la coincidencia de tipo de datos
-            peliculas_director['id_credits'] = pd.to_numeric(peliculas_director['id_credits'], errors='coerce', downcast='integer')
             
             # Obtener los IDs de las peliculas en las que el director ha trabajado
             peliculas_ids_columna = 'id_credits'  # Nombre de la columna en credits_df_parquet
             peliculas_ids = peliculas_director[[peliculas_ids_columna]].drop_duplicates()
-
-            # Convertir la columna 'id_movies' a tipo int para asegurar la coincidencia de tipo de datos
-            movies_df_parquet['id_movies'] = pd.to_numeric(movies_df_parquet['id_movies'], errors='coerce', downcast='integer')
 
             # Unir los DataFrames de peliculas y créditos usando la columna 'id_movies' para el DataFrame de peliculas
             peliculas_director_df = pd.merge(peliculas_ids, movies_df_parquet, left_on=peliculas_ids_columna, right_on='id_movies', how='inner')
@@ -327,7 +317,7 @@ def obtener_exito_director(nombre_director: str):
             peliculas_detalles = [
                 {
                     "titulo": pelicula['title'],
-                    "fecha_estreno": pelicula['release_date'],
+                    "fecha_estreno": pelicula['release_date'].strftime('%Y-%m-%d'),
                     "retorno": pelicula['return'],
                     "costo": pelicula['budget'],
                     "ganancia": pelicula['revenue']
