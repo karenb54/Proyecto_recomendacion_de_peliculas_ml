@@ -1,6 +1,14 @@
 # Importar las librerias para crear la api
-from fastapi import FastAPI
+
+import numpy as np
 import pandas as pd
+from fastapi import FastAPI
+import matplotlib.pyplot as plt
+from scipy.sparse import hstack, csr_matrix
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 # crear una instancia para definir las rutas y funciones que se van a tomar como endpoints
@@ -9,6 +17,7 @@ aplicacion = FastAPI()
 # Extraer los datos de los dataframe
 credits_df_parquet = pd.read_parquet('Datasets/credits_dataset_parquet')
 movies_df_parquet = pd.read_parquet('Datasets/movies_dataset_parquet')
+dataframe_unido_modelo = pd.read_parquet('Datasets/dataset_unido_EDA')
 
 
 # Crear un decorador para la ruta principal que va a definir el endpoint raiz
@@ -334,6 +343,117 @@ def obtener_exito_director(nombre_director: str):
             # Retornar un mensaje indicando que la persona no es un director
             return {"mensaje": f"El nombre {nombre_director} se encuentra en la base de datos, pero no tiene el rol de director en las peliculas registradas."}
     
-    # Si no se encontraron créditos para la persona, retornar un mensaje de error
+    # Si no se encontraron creditos para la persona, retornar un mensaje de error
     else:
         return {"error": f"El nombre {nombre_director} no se encuentra en la base de datos de directores."}
+    
+# Función para procesar datos y calcular la similitud del coseno
+def procesar_datos():
+    dataframe_unido_modelo = pd.read_parquet('Datasets/dataset_unido_EDA')
+
+    # Reemplazar los valores nulos
+    dataframe_unido_modelo['name_genre'] = dataframe_unido_modelo['name_genre'].fillna('')
+    dataframe_unido_modelo['cast_name_actor'] = dataframe_unido_modelo['cast_name_actor'].fillna('')
+    dataframe_unido_modelo['crew_name_member'] = dataframe_unido_modelo['crew_name_member'].fillna('')
+    dataframe_unido_modelo['overview'] = dataframe_unido_modelo['overview'].fillna('')
+
+    # Normalizar características numéricas
+    caracteristicas_numericas = ['budget', 'revenue', 'vote_count', 'popularity']
+    escala = StandardScaler()
+    caracteristicas_numericas_normalizadas = escala.fit_transform(dataframe_unido_modelo[caracteristicas_numericas])
+
+    # Vectorización de características categóricas
+    vectorizar_genero = TfidfVectorizer(tokenizer=lambda x: x.split(','), token_pattern=None)
+    matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe_unido_modelo['name_genre'])
+
+    vectorizar_actor = TfidfVectorizer(tokenizer=lambda x: x.split(','), token_pattern=None)
+    matrix_tfidf_actor = vectorizar_actor.fit_transform(dataframe_unido_modelo['cast_name_actor'])
+
+    dataframe_unido_modelo['director'] = dataframe_unido_modelo.apply(lambda x: x['crew_name_member'] if x['crew_job'] == 'Director' else '', axis=1)
+    vectorizar_director = TfidfVectorizer(tokenizer=lambda x: x.split(','), token_pattern=None)
+    matrix_tfidf_director = vectorizar_director.fit_transform(dataframe_unido_modelo['director'])
+
+    vectorizar_overview = TfidfVectorizer(stop_words='english')
+    matrix_tfidf_overview = vectorizar_overview.fit_transform(dataframe_unido_modelo['overview'])
+
+    # Convertir la matriz numérica escalada a una matriz dispersa
+    matrix_numerica_escalada = csr_matrix(caracteristicas_numericas_normalizadas)
+
+    # Ponderar las matrices
+    peso_del_genero = 6.0
+    peso_del_actor = 3.0
+    peso_del_director = 2.0
+    peso_del_overview = 3.0
+
+    peso_del_genero_matrix = peso_del_genero * matrix_tfidf_genero
+    peso_del_actor_matrix = peso_del_actor * matrix_tfidf_actor
+    peso_del_director_matrix = peso_del_director * matrix_tfidf_director
+    peso_del_overview_matrix = peso_del_overview * matrix_tfidf_overview
+
+    # Combinar todas las matrices ponderadas
+    caracteristicas_combinadas = hstack([
+        matrix_numerica_escalada,
+        peso_del_genero_matrix,
+        peso_del_actor_matrix,
+        peso_del_director_matrix,
+        peso_del_overview_matrix
+    ])
+
+    # Reducir la dimensionalidad
+    svd = TruncatedSVD(n_components=100)
+    caracteristicas_reducidas = svd.fit_transform(caracteristicas_combinadas)
+
+    # Calcular similitud del coseno
+    similitud_del_coseno = cosine_similarity(caracteristicas_reducidas)
+
+    return dataframe_unido_modelo, similitud_del_coseno
+
+dataframe_unido_modelo, similitud_del_coseno = procesar_datos()
+
+@aplicacion.get("/recomendaciones/{titulo_pelicula}")
+
+def recommend_movies(titulo_pelicula: str):
+    """
+    Recomienda películas similares a una película dada basándose en la similitud del coseno.
+
+    Parámetros:
+        titulo_pelicula: El título de la película para la cual se desean obtener recomendaciones.
+
+    Retorna:
+        Si el título es válido retorna una serie de 5 títulos de películas recomendadas que son más similares a la película dada.
+        Si el título de la película no es válido retorna un mensaje indicando que el título no se encuentra disponible.
+    """
+    # Normalizar el título para comparar sin importar mayúsculas/minúsculas
+    titulo_pelicula = titulo_pelicula.lower()
+    
+    # Convertir todos los títulos en minúsculas para la comparación
+    dataframe_unido_modelo['title_lower'] = dataframe_unido_modelo['title'].str.lower()
+    
+    # Verificar la existencia del título en el DataFrame
+    if titulo_pelicula not in dataframe_unido_modelo['title_lower'].values:
+        return {"mensaje": f"El título '{titulo_pelicula}' no se encuentra disponible en el dataset."}
+    
+    # Obtener el índice de la película dada
+    idx = dataframe_unido_modelo[dataframe_unido_modelo['title_lower'] == titulo_pelicula].index[0]
+    
+    # Manejar matrices dispersas y densas
+    if isinstance(similitud_del_coseno, csr_matrix):
+        # Convertir a denso si es necesario
+        sim_scores = similitud_del_coseno[idx].toarray().flatten()
+    else:
+        # Si ya es denso, simplemente usa el índice
+        sim_scores = similitud_del_coseno[idx]
+    
+    # Enumerar y ordenar las similitudes
+    sim_scores = list(enumerate(sim_scores))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    sim_scores = sim_scores[1:6]
+    
+    # Tomar las 5 películas más similares
+    sim_scores = sim_scores[1:6]  # Excluye la película misma
+    
+    # Obtener los índices de las películas recomendadas
+    movie_indices = [i[0] for i in sim_scores]
+    titulos_recomendados = dataframe_unido_modelo['title'].iloc[movie_indices].tolist()
+
+    return {"Recomendaciones": titulos_recomendados}
