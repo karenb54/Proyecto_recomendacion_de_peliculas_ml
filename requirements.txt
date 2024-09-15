@@ -4,3 +4,4 @@ numpy
 pandas
 uvicorn
 scikit-learn
+matplotlib
