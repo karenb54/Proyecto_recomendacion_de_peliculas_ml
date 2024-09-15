@@ -5,3 +5,5 @@ pandas
 uvicorn
 scikit-learn
 matplotlib
+scipy
+sklearn
