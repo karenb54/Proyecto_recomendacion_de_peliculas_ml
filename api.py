@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI
-import matplotlib.pyplot as plt
 from scipy.sparse import hstack, csr_matrix
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
@@ -97,38 +96,6 @@ def cantidad_peliculas_dia(dia: str):
         return {"mensaje": f"La cantidad de peliculas estrenadas en los dias {dia} fueron {cantidad_de_peliculas} "}
     else:
         return {"error": "El Dia consultado no es valido. Por favor ingrese un dia de la semana en español."}
-    
-    # Crear una ruta para hacer consultas sobre la cantidad de peliculas en una fecha especifica
-
-@aplicacion.get("/cantidad_peliculas_fecha/{dia}/{mes}/{anio}")
-
-def cantidad_filmaciones_fecha(dia: int, mes: int, anio: int):
-    """
-    Consulta la cantidad de peliculas que fueron estrenadas en una fecha especifica (dia, mes, año).
-
-    Parametros:
-        dia: El dia consultado en formato numerico.
-        mes: El mes consultado en formato numérico.
-        anio: El año consultado en formato numerico.
-
-    Retorna:
-        Si el dia es valido retorna un mensaje indicando la cantidad de peliculas que fueron estrenadas en la fecha indicada.
-        Si el dia no es valido o no es encontrado retorna un mensaje de error.
-    """
-
-    try:
-        # Crear un objeto de fecha usando los parametros de dia, mes y año
-        fecha_especifica = pd.Timestamp(year=anio, month=mes, day=dia)
-        
-        # Filtrar el DataFrame para contar las peliculas que coinciden con la fecha especificada
-        cantidad_de_peliculas = movies_df_parquet[movies_df_parquet['release_date'] == fecha_especifica].shape[0]
-
-        # Retornar un mensaje indicando la cantidad de peliculas estrenadas en la fecha especifica
-        return {"mensaje": f"{cantidad_de_peliculas} peliculas fueron estrenadas el {dia}/{mes}/{anio}"}
-    
-    except ValueError:
-        # Si hay un error en la construccion de la fecha (por ejemplo, si la fecha no es valida), manejar el error
-        return {"error": "La fecha consultada no es valida. Por favor ingrese una fecha valida en formato numérico dd/mm/YYYY."}
     
 # Crear una ruta para hacer consultas sobre una pelicula dado su titulo
 
@@ -346,92 +313,85 @@ def obtener_exito_director(nombre_director: str):
     # Si no se encontraron creditos para la persona, retornar un mensaje de error
     else:
         return {"error": f"El nombre {nombre_director} no se encuentra en la base de datos de directores."}
+### Consulta para la recomendacion de peliculas
     
-### Consulta para recomendacion de peliculas
+# Vectorizo las caracteristicas numéricas y género en funciones separadas para reducir el uso de memoria.
+def procesar_datos(dataframe):
+    """
+    Procesa los datos del DataFrame para generar una matriz de caracteristicas combinadas y reducidas.
 
-# Vectorizo el genero y aplico un peso mayor a esta matriz
-vectorizar_genero = TfidfVectorizer(stop_words='english')
-matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe_unido_modelo['name_genre'])
+    Este procesamiento incluye:
+    1. Escalado de las caracteristicas numéricas.
+    2. Vectorización y ponderación del genero.
+    3. Vectorización del texto combinado (actores, directores, overview).
+    4. Combinación de todas las matrices vectorizadas en una sola.
+    5. Reducción de dimensionalidad mediante SVD para obtener una representación mas compacta.
 
-# Aplico peso al genero
-peso_del_genero = 6.0
-matrix_tfidf_genero_ponderado = peso_del_genero * matrix_tfidf_genero
+    Parametros:
+    
+        dataframe : el dataFrame 'dataframe_unido_modelo' que contiene las caracteristicas numericas, los generos y el texto combinado.
 
-# Combino las columnas relevantes en una sola columna para la vectorización
-dataframe_unido_modelo['texto_combinado'] = (
-    dataframe_unido_modelo['cast_name_actor'] + ' ' +
-    dataframe_unido_modelo['crew_name_member'] + ' ' +
-    dataframe_unido_modelo['overview']
-)
+    Retorna:
+    
+        caracteristicas_reducidas : una matriz con las caracteristicas combinadas y reducidas dimensionalmente.
+    """
+    # Escalo las caracteristicas numericas
+    caracteristicas_numericas = ['budget', 'revenue', 'vote_count', 'popularity']
+    escala = StandardScaler()
+    caracteristicas_numericas_normalizadas = escala.fit_transform(dataframe[caracteristicas_numericas])
+    matrix_numerica_escalada = csr_matrix(caracteristicas_numericas_normalizadas)
+    
+    # Vectorizo y pondero el genero
+    vectorizar_genero = TfidfVectorizer(stop_words='english')
+    matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe['name_genre'])
+    peso_del_genero = 6.0
+    matrix_tfidf_genero_ponderado = peso_del_genero * matrix_tfidf_genero
+    
+    # Vectorizo el texto combinado (actores, directores, overview)
+    vectorizar_texto_combinado = TfidfVectorizer(stop_words='english')
+    matrix_tfidf_combinado = vectorizar_texto_combinado.fit_transform(dataframe['texto_combinado'])
 
-# Reemplazo valores nulos en la columna combinada con una cadena vacía
-dataframe_unido_modelo['texto_combinado'] = dataframe_unido_modelo['texto_combinado'].fillna('')
+    # Combino todas las matrices en una sola (caracteristicas numericas, genero y texto combinado)
+    caracteristicas_combinadas = hstack([matrix_numerica_escalada, matrix_tfidf_genero_ponderado, matrix_tfidf_combinado])
+    
+    # Reduzco la dimensionalidad con SVD a 50 componentes para mantenerlo liviano
+    svd = TruncatedSVD(n_components=50)
+    caracteristicas_reducidas = svd.fit_transform(caracteristicas_combinadas)
+    
+    return caracteristicas_reducidas
 
-# Elimino caracteres no deseados como comas
-dataframe_unido_modelo['texto_combinado'] = dataframe_unido_modelo['texto_combinado'].str.replace(',', ' ')
-
-# Vectorizo el texto combinado (actores, directores, overview)
-vectorizar_texto_combinado = TfidfVectorizer(stop_words='english')
-matrix_tfidf_combinado = vectorizar_texto_combinado.fit_transform(dataframe_unido_modelo['texto_combinado'])
-
-# Normalizo las características numéricas
-caracteristicas_numericas = ['budget', 'revenue', 'vote_count', 'popularity']
-escala = StandardScaler()
-caracteristicas_numericas_normalizadas = escala.fit_transform(dataframe_unido_modelo[caracteristicas_numericas])
-matrix_numerica_escalada = csr_matrix(caracteristicas_numericas_normalizadas)
-
-# Combino la matriz numérica, la matriz ponderada de géneros y la matriz de texto combinado
-caracteristicas_combinadas = hstack([matrix_numerica_escalada, matrix_tfidf_genero_ponderado, matrix_tfidf_combinado])
-
-# Aseguro que la matriz combinada es de tipo csr_matrix
-if not isinstance(caracteristicas_combinadas, csr_matrix):
-    caracteristicas_combinadas = csr_matrix(caracteristicas_combinadas)
-
-# Reduzco la dimensionalidad con SVD
-svd = TruncatedSVD(n_components=100)
-caracteristicas_reducidas = svd.fit_transform(caracteristicas_combinadas)
-# Calculo la matriz de similitud del coseno
-similitud_del_coseno = cosine_similarity(caracteristicas_reducidas)
-# Preproceso los titulos en minusculas solo una vez fuera de la funcion
+# Proceso el DataFrame (solo se hace una vez)
 dataframe_unido_modelo['title_lower'] = dataframe_unido_modelo['title'].str.lower()
+caracteristicas_reducidas = procesar_datos(dataframe_unido_modelo)
 
+# Crear una ruta para hacer consultas sobre el modelo de recomendaciones
 @aplicacion.get("/recomendacion/{title}")
-
+# Creo una funcion de recomendacion con el calculo de similitud del coseno dentro
 def recomendacion(title: str):
     """
     Recomienda peliculas similares a una pelicula dada basada en la similitud del coseno.
-
+    
     Parametros:
-        title: El título de la película para la cual se desean obtener recomendaciones.
-        similitud_del_coseno: La matriz de similitud del coseno entre peliculas.
-
+        title: El titulo de la pelicula para la cual se desean obtener recomendaciones.
+        
     Retorna:
-        Si el titulo es valido retorna una lista de 5 títulos de películas recomendadas que son más similares a la película dada.
-        Si el titulo no es valido retorna un mensaje indicando que el título no se encuentra disponible en la base de datos.
+        Una lista de 5 titulos de peliculas recomendadas, o un mensaje de error si no se encuentra el titulo.
     """
-    # Normalizo el título para comparar sin importar mayúsculas/minúsculas
+    # Normalizo el titulo para comparar sin importar mayusculas/minusculas
     title = title.lower()
 
-    # Verifico si el título está en el DataFrame
+    # Verifico si el titulo esta en el DataFrame
     if title not in dataframe_unido_modelo['title_lower'].values:
-        return {"error": f"La película '{title}' no se encuentra dentro de la muestra de datos."}
-    
-    # Obtengo el índice de la película dada
+        return {"error": f"La pelicula '{title}' no se encuentra en el dataset."}
+
+    # Obtengo el indice de la pelicula dada
     idx = dataframe_unido_modelo[dataframe_unido_modelo['title_lower'] == title].index[0]
-    
-    # Si la matriz de similitud es dispersa, trabajo directamente con ella sin convertir a densa
-    if isinstance(similitud_del_coseno, csr_matrix):
-        sim_scores = similitud_del_coseno[idx].toarray().flatten()
-    else:
-        sim_scores = similitud_del_coseno[idx]
-    
-    # Obtener los índices de las 5 películas más similares
-    sim_scores_idx = np.argsort(sim_scores)[::-1]
-    sim_scores_idx = sim_scores_idx[sim_scores_idx != idx]  # Excluir la película misma
-    
-    top_5_indices = sim_scores_idx[:5]  # Obtener los 5 primeros índices
-    
-    # Obtener los títulos de las películas recomendadas
+
+    # Calculo la matriz de similitud del coseno sobre la marcha para evitar mantenerla en memoria
+    sim_scores = cosine_similarity(caracteristicas_reducidas[idx].reshape(1, -1), caracteristicas_reducidas).flatten()
+
+    # Obtengo las 5 peliculas mas similares, excluyendo la misma pelicula
+    top_5_indices = np.argsort(sim_scores)[::-1][1:6]  # [1:6] hace que se excluya la pelicula misma
     top_5_titles = dataframe_unido_modelo.iloc[top_5_indices]['title'].tolist()
-    
+
     return {"recomendaciones": top_5_titles}

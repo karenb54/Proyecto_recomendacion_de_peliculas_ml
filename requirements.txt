@@ -6,4 +6,3 @@ uvicorn
 scikit-learn
 matplotlib
 scipy
-scikit-learn
