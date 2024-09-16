@@ -357,6 +357,8 @@ similitud_del_coseno = cosine_similarity(caracteristicas_reducidas)
 dataframe_unido_modelo_muestra['title_lower'] = dataframe_unido_modelo_muestra['title'].str.lower()
 
 @aplicacion.get("/recomendacion/{title}")
+# Función para obtener las mejores recomendaciones
+
 def recomendacion(title: str):
     """
     Recomienda películas similares a una película dada basada en la similitud del coseno.
@@ -372,11 +374,11 @@ def recomendacion(title: str):
     title = title.lower()
 
     # Verifico si el título está en el DataFrame
-    if title not in dataframe_unido_modelo_muestra['title_lower'].values:
+    if title not in dataframe_unido_modelo['title_lower'].values:
         return {"error": f"La película '{title}' no se encuentra dentro de la muestra de datos."}
 
     # Obtengo el índice de la película dada
-    idx = dataframe_unido_modelo_muestra[dataframe_unido_modelo_muestra['title_lower'] == title].index[0]
+    idx = dataframe_unido_modelo[dataframe_unido_modelo['title_lower'] == title].index[0]
 
     # Si la matriz de similitud es dispersa, trabajo directamente con ella sin convertir a densa
     if isinstance(similitud_del_coseno, csr_matrix):
@@ -384,13 +386,12 @@ def recomendacion(title: str):
     else:
         sim_scores = similitud_del_coseno[idx]
 
-    # Obtener los índices de las 5 películas más similares
-    sim_scores_idx = np.argsort(sim_scores)[::-1]
-    sim_scores_idx = sim_scores_idx[sim_scores_idx != idx]  # Excluir la película misma
-
-    top_5_indices = sim_scores_idx[:5]  # Obtener los 5 primeros índices
+    # Obtener las 5 tuplas más cercanas usando min-heap
+    top_5_indices = np.argsort(sim_scores)[::-1]  # Ordena de mayor a menor
+    top_5_indices = top_5_indices[sim_scores[top_5_indices] > 0]  # Filtra las similitudes positivas
+    top_5_indices = [i for i in top_5_indices if i != idx][:5]  # Excluye la película misma y toma las 5 mejores
 
     # Obtener los títulos de las películas recomendadas
-    top_5_titles = dataframe_unido_modelo_muestra.iloc[top_5_indices]['title'].tolist()
+    top_5_titles = dataframe_unido_modelo.iloc[top_5_indices]['title'].tolist()
 
     return {"recomendaciones": top_5_titles}
