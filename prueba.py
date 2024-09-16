@@ -1,11 +1,9 @@
 # Importar las librerias para crear la api
 
-import heapq
+
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI
-import matplotlib.pyplot as plt
-from sklearn.utils import shuffle
 from scipy.sparse import hstack, csr_matrix
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
@@ -318,85 +316,63 @@ def obtener_exito_director(nombre_director: str):
         return {"error": f"El nombre {nombre_director} no se encuentra en la base de datos de directores."}
 ### Consulta para la recomendacion de peliculas
     
-# Selecciono una muestra del 30% de los datos
-dataframe_unido_modelo_muestra = dataframe_unido_modelo.sample(frac=0.30, random_state=42)
-# Vectorizo el género y aplico un peso mayor a esta matriz
-vectorizar_genero = TfidfVectorizer(stop_words='english')
-matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe_unido_modelo_muestra['name_genre'])
-# Aplico peso al género
-peso_del_genero = 6.0
-matrix_tfidf_genero_ponderado = peso_del_genero * matrix_tfidf_genero
-# Combino las columnas relevantes en una sola columna para la vectorización
-dataframe_unido_modelo_muestra['texto_combinado'] = (
-    dataframe_unido_modelo_muestra['cast_name_actor'] + ' ' +
-    dataframe_unido_modelo_muestra['crew_name_member'] + ' ' +
-    dataframe_unido_modelo_muestra['overview']
-)
-# Reemplazo valores nulos en la columna combinada con una cadena vacía
-dataframe_unido_modelo_muestra['texto_combinado'] = dataframe_unido_modelo_muestra['texto_combinado'].fillna('')
-# Elimino caracteres no deseados como comas
-dataframe_unido_modelo_muestra['texto_combinado'] = dataframe_unido_modelo_muestra['texto_combinado'].str.replace(',', ' ')
-# Vectorizo el texto combinado (actores, directores, overview)
-vectorizar_texto_combinado = TfidfVectorizer(stop_words='english')
-matrix_tfidf_combinado = vectorizar_texto_combinado.fit_transform(dataframe_unido_modelo_muestra['texto_combinado'])
-# Normalizo las características numéricas
-caracteristicas_numericas = ['budget', 'revenue', 'vote_count', 'popularity']
-escala = StandardScaler()
-caracteristicas_numericas_normalizadas = escala.fit_transform(dataframe_unido_modelo_muestra[caracteristicas_numericas])
-matrix_numerica_escalada = csr_matrix(caracteristicas_numericas_normalizadas)
-# Combino la matriz numérica, la matriz ponderada de géneros y la matriz de texto combinado
-caracteristicas_combinadas = hstack([matrix_numerica_escalada, matrix_tfidf_genero_ponderado, matrix_tfidf_combinado])
-# Aseguro que la matriz combinada es de tipo csr_matrix
-if not isinstance(caracteristicas_combinadas, csr_matrix):
-    caracteristicas_combinadas = csr_matrix(caracteristicas_combinadas)
-# Reduzco la dimensionalidad con SVD (reducimos a 50 componentes para mayor eficiencia)
-svd = TruncatedSVD(n_components=50)
-caracteristicas_reducidas = svd.fit_transform(caracteristicas_combinadas)
-# Calculo la matriz de similitud del coseno
-similitud_del_coseno = cosine_similarity(caracteristicas_reducidas)
+# Vectorizo las características numéricas y género en funciones separadas para reducir el uso de memoria.
+def procesar_datos(dataframe):
+    # Escalo las características numéricas
+    caracteristicas_numericas = ['budget', 'revenue', 'vote_count', 'popularity']
+    escala = StandardScaler()
+    caracteristicas_numericas_normalizadas = escala.fit_transform(dataframe[caracteristicas_numericas])
+    matrix_numerica_escalada = csr_matrix(caracteristicas_numericas_normalizadas)
+    
+    # Vectorizo y pondero el género
+    vectorizar_genero = TfidfVectorizer(stop_words='english')
+    matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe['name_genre'])
+    peso_del_genero = 6.0
+    matrix_tfidf_genero_ponderado = peso_del_genero * matrix_tfidf_genero
+    
+    # Vectorizo el texto combinado (actores, directores, overview)
+    vectorizar_texto_combinado = TfidfVectorizer(stop_words='english')
+    matrix_tfidf_combinado = vectorizar_texto_combinado.fit_transform(dataframe['texto_combinado'])
 
-# Preproceso los titulos en minusculas solo una vez fuera de la funcion
+    # Combino todas las matrices en una sola (características numéricas, género y texto combinado)
+    caracteristicas_combinadas = hstack([matrix_numerica_escalada, matrix_tfidf_genero_ponderado, matrix_tfidf_combinado])
+    
+    # Reduzco la dimensionalidad con SVD a 50 componentes para mantenerlo liviano
+    svd = TruncatedSVD(n_components=50)
+    caracteristicas_reducidas = svd.fit_transform(caracteristicas_combinadas)
+    
+    return caracteristicas_reducidas
+
+# Proceso el DataFrame (solo se hace una vez)
 dataframe_unido_modelo['title_lower'] = dataframe_unido_modelo['title'].str.lower()
+caracteristicas_reducidas = procesar_datos(dataframe_unido_modelo)
+
+# Función de recomendación con el cálculo de similitud del coseno dentro
 def recomendacion(title: str):
     """
     Recomienda películas similares a una película dada basada en la similitud del coseno.
-
+    
     Parámetros:
         title: El título de la película para la cual se desean obtener recomendaciones.
-    
+        
     Retorna:
-        Si el título es válido, retorna una lista de 5 títulos de películas recomendadas que son más similares.
-        Si el título no es válido, retorna un mensaje indicando que el título no está disponible.
+        Una lista de 5 títulos de películas recomendadas, o un mensaje de error si no se encuentra el título.
     """
     # Normalizo el título para comparar sin importar mayúsculas/minúsculas
     title = title.lower()
 
     # Verifico si el título está en el DataFrame
-    if title not in dataframe_unido_modelo_muestra['title_lower'].values:
-        return {"error": f"La película '{title}' no se encuentra dentro de la muestra de datos."}
+    if title not in dataframe_unido_modelo['title_lower'].values:
+        return {"error": f"La película '{title}' no se encuentra en el dataset."}
 
     # Obtengo el índice de la película dada
-    idx = dataframe_unido_modelo_muestra[dataframe_unido_modelo_muestra['title_lower'] == title].index[0]
+    idx = dataframe_unido_modelo[dataframe_unido_modelo['title_lower'] == title].index[0]
 
-    # Si la matriz de similitud es dispersa, trabajo directamente con ella sin convertir a densa
-    if isinstance(similitud_del_coseno, csr_matrix):
-        sim_scores = similitud_del_coseno[idx].toarray().flatten()
-    else:
-        sim_scores = similitud_del_coseno[idx]
+    # Calculo la matriz de similitud del coseno sobre la marcha para evitar mantenerla en memoria
+    sim_scores = cosine_similarity(caracteristicas_reducidas[idx].reshape(1, -1), caracteristicas_reducidas).flatten()
 
-    # Usar un min-heap para encontrar las 5 películas más similares
-    top_5_heap = []
-    for i in range(len(sim_scores)):
-        if i != idx:  # Excluir la película misma
-            heapq.heappush(top_5_heap, (sim_scores[i], i))
-            if len(top_5_heap) > 5:
-                heapq.heappop(top_5_heap)
-    
-    # Obtener los índices de las 5 películas más similares
-    top_5_indices = [index for _, index in top_5_heap]
-    top_5_indices = sorted(top_5_indices, key=lambda x: sim_scores[x], reverse=True)
-    
-    # Obtener los títulos de las películas recomendadas
-    top_5_titles = dataframe_unido_modelo_muestra.iloc[top_5_indices]['title'].tolist()
+    # Obtener las 5 películas más similares, excluyendo la misma película
+    top_5_indices = np.argsort(sim_scores)[::-1][1:6]  # [1:6] excluye la película misma
+    top_5_titles = dataframe_unido_modelo.iloc[top_5_indices]['title'].tolist()
 
     return {"recomendaciones": top_5_titles}
