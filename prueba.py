@@ -347,6 +347,8 @@ def procesar_datos(dataframe):
 dataframe_unido_modelo['title_lower'] = dataframe_unido_modelo['title'].str.lower()
 caracteristicas_reducidas = procesar_datos(dataframe_unido_modelo)
 
+# Crear una ruta para hacer consultas sobre el modelo de recomendaciones
+@aplicacion.get("/recomendacion/{title}")
 # Función de recomendación con el cálculo de similitud del coseno dentro
 def recomendacion(title: str):
     """
