@@ -97,6 +97,38 @@ def cantidad_peliculas_dia(dia: str):
     else:
         return {"error": "El Dia consultado no es valido. Por favor ingrese un dia de la semana en español."}
     
+# Crear una ruta para hacer consultas sobre la cantidad de peliculas en una fecha especifica
+
+@aplicacion.get("/cantidad_peliculas_fecha/{dia}/{mes}/{anio}")
+
+def cantidad_filmaciones_fecha(dia: int, mes: int, anio: int):
+    """
+    Consulta la cantidad de peliculas que fueron estrenadas en una fecha especifica (dia, mes, año).
+
+    Parametros:
+        dia: El dia consultado en formato numerico.
+        mes: El mes consultado en formato numérico.
+        anio: El año consultado en formato numerico.
+
+    Retorna:
+        Si el dia es valido retorna un mensaje indicando la cantidad de peliculas que fueron estrenadas en la fecha indicada.
+        Si el dia no es valido o no es encontrado retorna un mensaje de error.
+    """
+
+    try:
+        # Crear un objeto de fecha usando los parametros de dia, mes y año
+        fecha_especifica = pd.Timestamp(year=anio, month=mes, day=dia)
+        
+        # Filtrar el DataFrame para contar las peliculas que coinciden con la fecha especificada
+        cantidad_de_peliculas = movies_df_parquet[movies_df_parquet['release_date'] == fecha_especifica].shape[0]
+
+        # Retornar un mensaje indicando la cantidad de peliculas estrenadas en la fecha especifica
+        return {"mensaje": f"{cantidad_de_peliculas} peliculas fueron estrenadas el {dia}/{mes}/{anio}"}
+    
+    except ValueError:
+        # Si hay un error en la construccion de la fecha (por ejemplo, si la fecha no es valida), manejar el error
+        return {"error": "La fecha consultada no es valida. Por favor ingrese una fecha valida en formato numérico dd/mm/YYYY."}
+    
 # Crear una ruta para hacer consultas sobre una pelicula dado su titulo
 
 @aplicacion.get("/puntaje_pelicula/{nombre}")
