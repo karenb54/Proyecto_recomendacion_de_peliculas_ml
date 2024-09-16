@@ -65,29 +65,35 @@ Este proyecto me permitió poner en práctica conocimientos teóricos adquiridos
 ✦ PowerBI: Herramienta utilizada para visualizar datos de manera más accesible y detallada.
 
 ### Proceso de Desarrollo:
-✦ Carga y Procesamiento de Datos: Mediante un notebook de ETL (extraccion, transformacion y carga de datos) se observaron los datos, se desanidaron las columnas pertinentes y se hizo la respectiva limpieza de datos obteniendo dos nuevos datasets listos para realizar un analisis exploratorio
+✦ Carga y Procesamiento de Datos: Se implementó un proceso de ETL (Extracción, Transformación y Carga) mediante un notebook. En esta fase, se examinaron los datos en profundidad, desanidando las columnas relevantes y aplicando una limpieza exhaustiva. Esto permitió obtener dos datasets optimizados, que fueron la base para el análisis exploratorio de datos.
 
-✦ Primera Optimización del Dataset: Se decidió tomar para el analisis exploratorio de datos unicamente las peliculas en idioma español o ingles.
+✦ Primera Optimización del Dataset: Para realizar el análisis exploratorio de datos de manera más eficiente, se decidió filtrar las películas únicamente en los idiomas español e inglés, ya que estas representaban los mercados de mayor interés para el proyecto.
 
-✦ Analisis exploratorio de datos : Mediante un notebook llamado EDA se pudieron observar de forma grafica (histogramas, matrices de correlacion, barras de distribucion, nubes de palabras, Tendencias en el tiempo) las diferentes caracteristicas tanto numericas como categoricas a tener en cuenta, ademas se solcionaron problemas con datos faltantes, outliers pertinentes
+✦ Analisis exploratorio de datos (EDA) : Utilizando un notebook denominado "EDA", se analizaron gráficamente las características numéricas y categóricas del dataset. Esto incluyó histogramas, matrices de correlación, gráficos de barras, nubes de palabras y análisis de tendencias temporales. Durante este proceso, se resolvieron problemas de datos faltantes y outliers para garantizar la integridad del análisis.
 
-✦ Segunda Optimizacion: dentro del notebook del analisis exploratorio se decidio guardar un dataset mas pequeño donde se unieron los datasets originales, se filtro la fecha de lanzamiento de las peliculas mayor a 1980 basandonos en las tendencias temporales graficadas, y donde el status de la pelicula sea 'released' ya que estamos recomendando peliculas para ver basadas en una pelicula dada, en este dataset se dejaron unicamente las columnas necesarias para la creacion del modelo 
+✦ Segunda Optimizacion: Tras el análisis exploratorio, se creó un nuevo dataset más reducido. Este dataset unió los archivos originales y aplicó filtros clave, como limitar las películas a las que fueron lanzadas a partir de 1980 y cuya fecha de estreno indicaba un estatus de "released" (estrenada), ya que el sistema de recomendación está orientado a sugerir películas disponibles para ver. Además, solo se conservaron las columnas necesarias para la construcción del modelo de recomendación.
 
-✦ Creación del Modelo de Recomendación: Se construyó un modelo de recomendación basado en la similitud del coseno, utilizando características tanto numéricas como categóricas, incluyendo presupuesto, ganancias, cantidad de votos, popularidad, actores, directores, genero de la pelicula y descripcion de la película que fueron vectorizadas convirtiendose en matrices dispersas concatenadas.
+✦ Creación del Modelo de Recomendación: El modelo se construyó utilizando un enfoque de filtrado basado en contenido, empleando la similitud del coseno para medir la relación entre películas. Las características incluyeron tanto variables numéricas (presupuesto, ingresos, votos, popularidad) como categóricas (actores, directores, género y descripción de la película). Las variables categóricas se vectorizaron utilizando TfidfVectorizer, mientras que las numéricas se escalaron con StandardScaler. Finalmente, se combinaron las matrices resultantes para construir el modelo.
 
-✦ Despliegue de la API: Se utilizó FastAPI para crear y desplegar la API en Render, permitiendo consultas de recomendaciones y detalles sobre películas, actores, y directores; El modelo de similitud del coseno realizado en la api cuenta con dos funciones una donde se procesan los datos (vectorizaciones, escalado, ponderacion, entre otros procesos) para la optimizacion de la memoria dado que render tiene un limite reducido.
-    
+✦ Despliegue de la API: Para desplegar el sistema, se utilizó FastAPI, lo que permitió crear una API alojada en Render. Esta API permite consultas como recomendaciones basadas en contenido, además de detalles sobre películas, actores y directores. Debido a las limitaciones de memoria en Render, el sistema cuenta con una función de procesamiento de datos optimizada que realiza las vectorizaciones, escalado y ponderación en una fase previa, mejorando el rendimiento en tiempo real.
+
 ## Datos y Fuentes
-Los datos necesarios para el despliegue del proyecto se pueden encontrar en la carpeta Datasets a continuacion observaremos las columnas y los tipos de datos que contienen.
-✦ dataset optimizado de movies
+Los datos utilizados para este proyecto se encuentran en la carpeta "Datasets". A continuación, se presentan los principales datasets optimizados utilizados para el análisis y el desarrollo del modelo de recomendación:
+✦ Dataset optimizado de películas (movies):
+
+Este dataset contiene información esencial sobre las películas, como el presupuesto, los ingresos, la popularidad, el género y las fechas de lanzamiento, entre otros.
 
 ![image](https://github.com/user-attachments/assets/7b05f327-195c-4e97-b3fe-eaeb5946c594)
 
-✦dataset optimizado de credits
+✦ Dataset optimizado de créditos (credits):
+
+En este dataset se almacena información clave sobre los actores, directores y demás miembros del equipo de producción de las películas.
 
 ![image](https://github.com/user-attachments/assets/bfce4ac0-3b6b-471d-9f28-f908c99e7655)
 
-✦dataset final unido
+✦ Dataset final unido:
+
+Este dataset combina los dos archivos anteriores (películas y créditos) para facilitar el análisis y la construcción del modelo. Contiene las columnas relevantes para la recomendación de películas.
 
 ![image](https://github.com/user-attachments/assets/6cdbb28b-c335-4aa4-8786-ff347fa3bfdb)
 
