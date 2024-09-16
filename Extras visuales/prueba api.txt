@@ -1,21 +1,15 @@
 # Ejemplos para probar la api con sus diferentes endpoints
-cantidad_peliculas_mes/mayo
 
-cantidad_peliculas_dia/viernes
 
-cantidad_peliculas_fecha/28/05/1994
-
-puntaje_pelicula/toy story
-
-votos_pelicula/toy story
-
-obtener_exito_actor/zac efron
-
-obtener_exito_director/tim bevan 
-
-obtener_exito_director/peter landesman
-
-recomendacion/toy story
+* /cantidad_peliculas_mes/mayo
+* /cantidad_peliculas_dia/viernes
+* /cantidad_peliculas_fecha/28/05/1994
+* /puntaje_pelicula/toy story
+* /votos_pelicula/toy story
+* /obtener_exito_actor/zac efron
+* /obtener_exito_director/tim bevan 
+* /obtener_exito_director/peter landesman
+* /recomendacion/toy story
 
 
 
