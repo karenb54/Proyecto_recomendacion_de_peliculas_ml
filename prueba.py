@@ -1,5 +1,6 @@
 # Importar las librerias para crear la api
 
+import heapq
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI
@@ -317,8 +318,8 @@ def obtener_exito_director(nombre_director: str):
         return {"error": f"El nombre {nombre_director} no se encuentra en la base de datos de directores."}
 ### Consulta para la recomendacion de peliculas
     
-# Selecciono una muestra del 10% de los datos
-dataframe_unido_modelo_muestra = dataframe_unido_modelo.sample(frac=0.50, random_state=42)
+# Selecciono una muestra del 30% de los datos
+dataframe_unido_modelo_muestra = dataframe_unido_modelo.sample(frac=0.30, random_state=42)
 # Vectorizo el género y aplico un peso mayor a esta matriz
 vectorizar_genero = TfidfVectorizer(stop_words='english')
 matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe_unido_modelo_muestra['name_genre'])
@@ -353,12 +354,9 @@ svd = TruncatedSVD(n_components=50)
 caracteristicas_reducidas = svd.fit_transform(caracteristicas_combinadas)
 # Calculo la matriz de similitud del coseno
 similitud_del_coseno = cosine_similarity(caracteristicas_reducidas)
-# Preproceso los títulos en minúsculas solo una vez fuera de la función
-dataframe_unido_modelo_muestra['title_lower'] = dataframe_unido_modelo_muestra['title'].str.lower()
 
-@aplicacion.get("/recomendacion/{title}")
-# Función para obtener las mejores recomendaciones
-
+# Preproceso los titulos en minusculas solo una vez fuera de la funcion
+dataframe_unido_modelo['title_lower'] = dataframe_unido_modelo['title'].str.lower()
 def recomendacion(title: str):
     """
     Recomienda películas similares a una película dada basada en la similitud del coseno.
@@ -386,12 +384,19 @@ def recomendacion(title: str):
     else:
         sim_scores = similitud_del_coseno[idx]
 
-    # Obtener las 5 tuplas más cercanas usando min-heap
-    top_5_indices = np.argsort(sim_scores)[::-1]  # Ordena de mayor a menor
-    top_5_indices = top_5_indices[sim_scores[top_5_indices] > 0]  # Filtra las similitudes positivas
-    top_5_indices = [i for i in top_5_indices if i != idx][:5]  # Excluye la película misma y toma las 5 mejores
-
+    # Usar un min-heap para encontrar las 5 películas más similares
+    top_5_heap = []
+    for i in range(len(sim_scores)):
+        if i != idx:  # Excluir la película misma
+            heapq.heappush(top_5_heap, (sim_scores[i], i))
+            if len(top_5_heap) > 5:
+                heapq.heappop(top_5_heap)
+    
+    # Obtener los índices de las 5 películas más similares
+    top_5_indices = [index for _, index in top_5_heap]
+    top_5_indices = sorted(top_5_indices, key=lambda x: sim_scores[x], reverse=True)
+    
     # Obtener los títulos de las películas recomendadas
-    top_5_titles = dataframe_unido_modelo.iloc[top_5_indices]['title'].tolist()
+    top_5_titles = dataframe_unido_modelo_muestra.iloc[top_5_indices]['title'].tolist()
 
     return {"recomendaciones": top_5_titles}
