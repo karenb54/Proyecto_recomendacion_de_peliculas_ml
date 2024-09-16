@@ -318,7 +318,7 @@ def obtener_exito_director(nombre_director: str):
 ### Consulta para la recomendacion de peliculas
     
 # Selecciono una muestra del 10% de los datos
-dataframe_unido_modelo_muestra = dataframe_unido_modelo.sample(frac=0.40, random_state=42)
+dataframe_unido_modelo_muestra = dataframe_unido_modelo.sample(frac=0.50, random_state=42)
 # Vectorizo el género y aplico un peso mayor a esta matriz
 vectorizar_genero = TfidfVectorizer(stop_words='english')
 matrix_tfidf_genero = vectorizar_genero.fit_transform(dataframe_unido_modelo_muestra['name_genre'])
@@ -374,11 +374,11 @@ def recomendacion(title: str):
     title = title.lower()
 
     # Verifico si el título está en el DataFrame
-    if title not in dataframe_unido_modelo['title_lower'].values:
+    if title not in dataframe_unido_modelo_muestra['title_lower'].values:
         return {"error": f"La película '{title}' no se encuentra dentro de la muestra de datos."}
 
     # Obtengo el índice de la película dada
-    idx = dataframe_unido_modelo[dataframe_unido_modelo['title_lower'] == title].index[0]
+    idx = dataframe_unido_modelo_muestra[dataframe_unido_modelo_muestra['title_lower'] == title].index[0]
 
     # Si la matriz de similitud es dispersa, trabajo directamente con ella sin convertir a densa
     if isinstance(similitud_del_coseno, csr_matrix):
