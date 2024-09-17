@@ -1,5 +1,10 @@
 <h1 align="center"><strong>Proyecto Individual #1 - Sistema de Recomendación de Películas</strong></h1>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/96f9ee1f-262c-4a79-8d5f-b5b1ddf285d8" alt="Descripción de la imagen">
+</p>
+
+
 ## Descripción
 
 Este proyecto implementa un sistema de recomendación de películas utilizando machine learning, desarrollado como parte de mi formación en SoyHenry. El sistema permite realizar consultas sobre detalles de películas, directores, y actores, así como obtener recomendaciones basadas en criterios como el género, popularidad, actores, directores, y sinopsis.
@@ -67,11 +72,43 @@ Este proyecto me permitió poner en práctica conocimientos teóricos adquiridos
 ✦ PowerBI: Herramienta utilizada para visualizar datos de manera más accesible y detallada.
 
 ### Proceso de Desarrollo:
-✦ Carga y Procesamiento de Datos: Se implementó un proceso de ETL (Extracción, Transformación y Carga) mediante un notebook. En esta fase, se examinaron los datos en profundidad, desanidando las columnas relevantes y aplicando una limpieza exhaustiva. Esto permitió obtener dos datasets optimizados, que fueron la base para el análisis exploratorio de datos.
+✦ Carga y Procesamiento de Datos: Se implementó un proceso de ETL (Extracción, Transformación y Carga) mediante un notebook. En esta fase, se examinaron los datos en profundidad, se realizaron los cambios solicitados, desanidando las columnas relevantes, modificando o eliminando los datos nulos y se crearon las columnas solicitadas. Esto permitió obtener dos datasets optimizados, que fueron la base para el análisis exploratorio de datos.
 
 ✦ Primera Optimización del Dataset: Para realizar el análisis exploratorio de datos de manera más eficiente, se decidió filtrar las películas únicamente en los idiomas español e inglés, ya que estas representaban los mercados de mayor interés para el proyecto.
 
-✦ Analisis exploratorio de datos (EDA) : Utilizando un notebook denominado "EDA", se analizaron gráficamente las características numéricas y categóricas del dataset. Esto incluyó histogramas, matrices de correlación, gráficos de barras, nubes de palabras y análisis de tendencias temporales. Durante este proceso, se resolvieron problemas de datos faltantes y outliers para garantizar la integridad del análisis.
+✦ Análisis Exploratorio de Datos (EDA)
+1. Carga y Unión de Datasets:
+Se comenzó el análisis con la carga de los datasets procesados durante la fase de ETL. Posteriormente, los datasets se unieron para obtener una vista consolidada de la información. Esta unión permitió tener una visión general de los datos, preparando el camino para un análisis más detallado.
+
+2. Manejo de Datos Faltantes:
+Se revisaron las columnas con valores faltantes y se decidió eliminar aquellas donde más del 10% de los datos estaban ausentes. Este paso fue crucial para mantener un dataset limpio y manejable, sin perder información importante para el análisis.
+
+3. Distribución de Variables Numéricas:
+Se generaron histogramas con escala logarítmica para observar la distribución de variables como budget, revenue, vote_average, runtime, vote_count, y popularity. Esta visualización permitió identificar patrones generales y detectar posibles valores atípicos.
+
+4. Detección y Análisis de Outliers:
+Utilizando gráficos de caja (boxplots), se identificaron outliers en varias variables. Se realizó un análisis más detallado, concluyendo que los outliers en budget, revenue, vote_count, y popularity correspondían a películas importantes dentro de la industria, por lo que se mantuvieron. En el caso del runtime (duración), se detectaron valores que correspondían a miniseries en lugar de películas, y se decidió eliminarlas para evitar sesgos en el análisis.
+
+5. Análisis de Género en el Reparto y Producción:
+Se exploró la distribución de género entre los actores y los miembros del equipo de producción. Aunque no se encontraron valores atípicos, se observó un sesgo hacia el género masculino y la falta de información en muchos casos. A pesar de esto, no afectó significativamente el análisis del modelo.
+
+6. Popularidad de Actores y Directores:
+Se realizaron gráficos comparativos para analizar la influencia de actores y directores en la popularidad de las películas. Estos gráficos destacaron a los actores y directores con mayor número de películas y popularidad, proporcionando insights valiosos sobre las figuras clave de la industria.
+
+7. Distribución de Géneros y su Relación con Popularidad y Ganancias:
+Se examinó la relación entre los géneros cinematográficos y las métricas de popularidad y ganancias. Este análisis mostró qué géneros eran más exitosos, tanto en términos comerciales como de audiencia, y fue clave para refinar las recomendaciones del modelo.
+
+8. Matriz de Correlación:
+Se generó una matriz de correlación entre las variables numéricas, identificando una fuerte relación entre características como vote_count y popularity. Las variables más correlacionadas fueron seleccionadas para la construcción del modelo de recomendación.
+
+9. Análisis de la Descripción de Películas (Overview):
+Se creó una nube de palabras a partir de la columna overview, permitiendo visualizar los términos más frecuentes en las descripciones de las películas. Este análisis facilitó la identificación de temáticas comunes y la exploración de similitudes entre películas.
+
+10. Análisis de Tendencias Temporales:
+Finalmente, se analizaron las tendencias de variables clave como revenue, budget, vote_count, y popularity a lo largo del tiempo. Este análisis permitió identificar patrones temporales que ayudaron a ajustar y mejorar el enfoque del modelo.
+
+Gracias a este análisis exhaustivo, se identificaron las características más relevantes para la construcción del modelo de recomendación, garantizando recomendaciones precisas y útiles para los usuarios.  
+> **Nota:** "Para observar en mayor profundidad los gráficos y el análisis realizado, puede consultar el Notebook de EDA disponible [aquí](https://github.com/karenb54/Proyecto_recomendacion_de_peliculas_ml/blob/main/Notebooks/EDA.ipynb).".  
 
 ✦ Segunda Optimizacion: Tras el análisis exploratorio, se creó un nuevo dataset más reducido. Este dataset unió los archivos originales y aplicó filtros clave, como limitar las películas a las que fueron lanzadas a partir de 1980 y cuya fecha de estreno indicaba un estatus de "released" (estrenada), ya que el sistema de recomendación está orientado a sugerir películas disponibles para ver. Además, solo se conservaron las columnas necesarias para la construcción del modelo de recomendación.
 
@@ -80,7 +117,7 @@ Este proyecto me permitió poner en práctica conocimientos teóricos adquiridos
 ✦ Despliegue de la API: Para desplegar el sistema, se utilizó FastAPI, lo que permitió crear una API alojada en Render. Esta API permite consultas como recomendaciones basadas en contenido, además de detalles sobre películas, actores y directores. Debido a las limitaciones de memoria en Render, el sistema cuenta con una función de procesamiento de datos optimizada que realiza las vectorizaciones, escalado y ponderación en una fase previa, mejorando el rendimiento en tiempo real.
 
 ## Datos y Fuentes
-Los datos utilizados para este proyecto se encuentran en la carpeta "Datasets". A continuación, se presentan los principales datasets optimizados utilizados para el análisis y el desarrollo del modelo de recomendación:
+Los datos utilizados para este proyecto se encuentran en la carpeta "Datasets". A continuación, se presentan los principales datasets optimizados utilizados para el análisis y el desarrollo del modelo de recomendación:  
 ✦ Dataset optimizado de películas (movies):
 
 Este dataset contiene información esencial sobre las películas, como el presupuesto, los ingresos, la popularidad, el género y las fechas de lanzamiento, entre otros.
@@ -147,7 +184,7 @@ El modelo de recomendación ha demostrado ser eficaz al generar recomendaciones 
 ## Links
 
 ✦ [Proyecto en Render](https://proyecto-recomendacion-de-peliculas-ml.onrender.com) → Enlace al endpoint principal de la API. Para ver todas las consultas disponibles, puedes ingresar a la ruta `/Docs` o consultar las rutas descritas en el archivo `api.txt`, ubicado en la carpeta "Extras visuales".  
-> **Nota:** El tiempo de reactivación de la API en Render puede demorar hasta **10 minutos** debido a que entra en modo reposo cuando no está en uso. Por favor, ten paciencia mientras la aplicación se reactiva.
+> **Nota:** "El tiempo de demora en la reactivación de la API es incierto, ya que depende del tráfico que Render tenga en el momento en que se realiza la consulta, por favor tener paciencia y si no es posible ingresar en el momento vuelva a intentarlo mas tarde.".
 
 ✦ [Video Explicativo](#) → Enlace al video explicativo y demostrativo del proyecto desplegado.
   
