@@ -16,6 +16,8 @@ Este proyecto me permitió poner en práctica conocimientos teóricos adquiridos
 ✦  [Despliegue de la API](#despliegue-de-la-api)  
 ✦  [Análisis Teórico del Modelo](#análisis-teórico-del-modelo)  
 ✦  [Resultados](#resultados)  
+✦  [Autor](#autor)  
+✦  [Links](#links)  
 
 ---
 
@@ -138,7 +140,16 @@ Con estas observaciones, se realizaron ajustes en el modelo para lograr un equil
 
 El modelo de recomendación ha demostrado ser eficaz al generar recomendaciones de películas basadas en diversas características relevantes. Los resultados muestran que el enfoque basado en la similitud del coseno permite recomendaciones personalizadas y coherentes. La API desplegada ofrece una forma sencilla de interactuar con el modelo, permitiendo consultas rápidas y efectivas.
 
-  
+## Autor
+
+✦ Este proyecto fue realizado por **Karen Lizeth Barbosa Rojas**.
+
+## Links
+
+✦ [Proyecto en Render](https://proyecto-recomendacion-de-peliculas-ml.onrender.com) → Enlace al endpoint principal de la API. Para ver todas las consultas disponibles, puedes ingresar a la ruta `/Docs` o consultar las rutas descritas en el archivo `api.txt`, ubicado en la carpeta "Extras visuales".  
+> **Nota:** El tiempo de reactivación de la API en Render puede demorar hasta **10 minutos** debido a que entra en modo reposo cuando no está en uso. Por favor, ten paciencia mientras la aplicación se reactiva.
+
+✦ [Video Explicativo](#) → Enlace al video explicativo y demostrativo del proyecto desplegado.
   
 
 
