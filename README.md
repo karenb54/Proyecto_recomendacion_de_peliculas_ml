@@ -186,8 +186,8 @@ El modelo de recomendación ha demostrado ser eficaz al generar recomendaciones 
 ✦ [Proyecto en Render](https://proyecto-recomendacion-de-peliculas-ml.onrender.com) → Enlace al endpoint principal de la API. Para ver todas las consultas disponibles, puedes ingresar a la ruta `/Docs` o consultar las rutas descritas en el archivo `api.txt`, ubicado en la carpeta "Extras visuales".  
 > **Nota:** "El tiempo de demora en la reactivación de la API es incierto, ya que depende del tráfico que Render tenga en el momento en que se realiza la consulta, por favor tener paciencia y si no es posible ingresar en el momento vuelva a intentarlo mas tarde.".
 
-✦ [Video Explicativo](#) → Enlace al video explicativo y demostrativo del proyecto desplegado.
-  
+✦ [Video Explicativo](https://drive.google.com/drive/folders/1XxLPfaKRAwk-aDCei6feGbo6aGXxMTIQ?usp=sharing) → Enlace al video explicativo y demostrativo del proyecto desplegado.  
+> **Nota:** "El video da una idea generalizada de lo que puede entregar la api, tiene una duracion aproximada de 8:26.".
 
 
 
